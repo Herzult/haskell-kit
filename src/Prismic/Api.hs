@@ -2,6 +2,11 @@
 
 module Prismic.Api
         ( api
+        , submit
+        , search
+        , Search (..)
+        , Token
+        , FormName
         )
     where
 
@@ -17,11 +22,6 @@ import Control.Arrow ((***))
 import Network.HTTP.Conduit (parseUrl, requestHeaders, withManager, httpLbs, responseBody)
 import Network.HTTP.Types (hAccept)
 import Network.URL
-
-type Token = Text
-
-data ApiContext = ApiContext (Maybe Token) Api
-    deriving (Show, Eq)
 
 api :: Url -> Maybe Token -> IO ApiContext
 api url mTk = ApiContext mTk `liftM` get url mTk

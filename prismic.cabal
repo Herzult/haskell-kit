@@ -18,6 +18,8 @@ cabal-version:      >=1.2
 
 library
   exposed-modules:      Prismic.Api
+                      , Prismic.Sample
+
   -- other-modules:
   -- other-extensions:
   hs-source-dirs:       src

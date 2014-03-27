@@ -2,15 +2,19 @@
 
 module Prismic.Types
         ( Api (..)
+        , ApiContext (..)
+        , Token
         , apiForm
         , Ref (..)
         , Form (..)
+        , FormName
         , FormField (..)
         , Url
         , Bookmark
         , Type
         , Tag
         , Search (..)
+        , search
         , Document (..)
         , DocumentData
         , Response (..)
@@ -32,13 +36,18 @@ type Url = Text
 type Bookmark = Text
 type Type = Text
 type Tag = Text
+type FormName = Text
+type Token = Text
+
+data ApiContext = ApiContext (Maybe Token) Api
+    deriving (Show, Eq)
 
 data Api = Api {
     apiRefs             :: [Ref]
   , apiBookmarks        :: Map Text Bookmark
   , apiTypes            :: Map Text Type
   , apiTags             :: [Tag]
-  , apiForms            :: Map Text Form
+  , apiForms            :: Map FormName Form
   , apiOauthInitiateUrl :: Url
   , apiOauthTokenUrl    :: Url
 } deriving (Show, Eq)
@@ -101,13 +110,23 @@ instance FromJSON FormField where
     parseJSON _ = mzero
 
 data Search = Search {
-    searchFormName  :: Text
+    searchFormName  :: FormName
   , searchApiRef    :: Maybe Ref
   , searchQuery     :: Maybe [Text]
   , searchPage      :: Maybe Integer
   , searchPageSize  :: Maybe Integer
   , searchOrderings :: Maybe Text
 } deriving (Show, Eq)
+
+search :: FormName -> Search
+search n = Search
+    { searchFormName  = n
+    , searchApiRef    = Nothing
+    , searchQuery     = Nothing
+    , searchPage      = Nothing
+    , searchPageSize  = Nothing
+    , searchOrderings = Nothing
+    }
 
 newtype DocumentData = DocumentData Value
     deriving (Show, Eq)
@@ -139,7 +158,7 @@ data Response = Response {
   , responseTotalPages       :: Integer
   , responseNextPage         :: Maybe Text
   , responsePrevPage         :: Maybe Text
-}
+} deriving (Show, Eq)
 
 instance FromJSON Response where
     parseJSON (Object o) = Response <$> o .: "results"
