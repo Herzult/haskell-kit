@@ -5,10 +5,11 @@ module Prismic.Types
         , ApiContext (..)
         , Token
         , apiForm
+        , apiMaster
         , Ref (..)
         , Form (..)
         , FormName
-        , FormField (..)
+        , Field (..)
         , Url
         , Bookmark
         , Type
@@ -21,9 +22,9 @@ module Prismic.Types
         )
     where
 
-import Data.Text
+import Data.Text (Text)
 import Data.Time
-import Data.Map
+import Data.Map (Map)
 
 import qualified Data.Map as Map
 
@@ -65,6 +66,9 @@ instance FromJSON Api where
 apiForm :: Api -> Text -> Maybe Form
 apiForm a = flip Map.lookup (apiForms a)
 
+apiMaster :: Api -> Ref
+apiMaster = head . filter refIsMaster . apiRefs
+
 data Ref = Ref {
     refRef         :: Text
   , refLabel       :: Text
@@ -85,7 +89,7 @@ data Form = Form {
   , formRel     :: Maybe Text
   , formEnctype :: Text
   , formAction  :: Text
-  , formFields  :: Map Text FormField
+  , formFields  :: Map Text Field
 } deriving (Show, Eq)
 
 instance FromJSON Form where
@@ -97,14 +101,14 @@ instance FromJSON Form where
                                 <*> o .: "fields"
     parseJSON _ = mzero
 
-data FormField = FormField {
-    formFieldType     :: Text
-  , formFieldDefault  :: Maybe Text
-  , formFieldMultiple :: Bool
+data Field = Field {
+    fieldType     :: Text
+  , fieldDefault  :: Maybe Text
+  , fieldMultiple :: Bool
 } deriving (Show, Eq)
 
-instance FromJSON FormField where
-    parseJSON (Object o) = FormField <$> o .: "type"
+instance FromJSON Field where
+    parseJSON (Object o) = Field <$> o .: "type"
                                      <*> o .:? "default"
                                      <*> o .: "multiple"
     parseJSON _ = mzero

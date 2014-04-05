@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Prismic.Api
         ( api
@@ -15,8 +16,9 @@ import Prismic.Types
 import Data.Text (Text, pack, unpack)
 import Data.Aeson (FromJSON, eitherDecode)
 import Data.Maybe (fromJust, fromMaybe)
+import Data.Map (toList)
 
-import Control.Monad (liftM)
+import Control.Monad (liftM, join)
 import Control.Arrow ((***))
 
 import Network.HTTP.Conduit (parseUrl, requestHeaders, withManager, httpLbs, responseBody)
@@ -28,27 +30,32 @@ api url mTk = ApiContext mTk `liftM` get url mTk
 
 submit :: ApiContext -> Search -> IO Response
 submit (ApiContext mTk api) srch = do
-    undefined
+    let Just form = apiForm api $ searchFormName srch
+        ref       = refRef $ fromMaybe (apiMaster api) (searchApiRef srch)
+        url       = formAction form `withQueryParams` (searchParams form ++ [("ref", ref)])
+
+    get url mTk
+
   where
-    form a n =
-        case apiForm a n of
-            Nothing -> error $ "form not found: " ++ unpack n
-            Just f  -> f
+    searchParams form =
+        let
+            vals = [ ("q", searchQuery srch)
+                   , ("page", ((:[]) . pack . show) `liftM` searchPage srch)
+                   , ("pageSize", ((:[]) . pack . show) `liftM` searchPage srch)
+                   , ("orderings", (:[]) `liftM` searchOrderings srch)
+                   ]
+            fields = toList $ formFields form
+        in
+            flatten $ flip map fields $ \(fieldName, field) ->
+                (fieldName, merge field (join $ lookup fieldName vals))
+
+    flatten = foldr (\(k, vs) xs -> xs ++ map (k,) vs) []
 
     merge field mVal =
-        let def = maybe [] (:[]) (formFieldDefault field)
-            val = fromMaybe [] mVal
-        in if formFieldMultiple field
-               then def ++ val
-               else if null val
-                        then def
-                        else val
-
-    searchVals src = [ ("q", searchQuery src)
-                     , ("page", ((:[]) . pack . show) `liftM` searchPage src)
-                     , ("page_size", ((:[]) . pack . show) `liftM` searchPage src)
-                     , ("orderings", (:[]) `liftM` searchOrderings src)
-                     ]
+        let def = maybe [] (:[]) (fieldDefault field)
+        in case mVal of
+            Nothing  -> def
+            Just val -> if fieldMultiple field then def ++ val else val
 
 get :: (FromJSON a) => Url -> Maybe Token -> IO a
 get url mTk = do
